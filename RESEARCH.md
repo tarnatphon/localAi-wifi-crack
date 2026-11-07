@@ -267,6 +267,69 @@ equivalents) unauthorized access is criminal regardless of intent.
 
 ---
 
+## 10. What world-class practitioners actually do
+
+Reconstructed from published work (Vanhoef, Steube, Hoorvitch), the OSWP/PEN-210 body of
+practice, and how commercial red teams scope wireless work. The pattern is consistent and
+it is **not** "build a better cracker".
+
+### 10.1 They attack in ROI order, and the password is usually last
+
+| Tier | Technique | Time | Why it wins |
+|---|---|---|---|
+| 1. Config | **WPS Pixie Dust** (`reaver -K` / `pixiewps`) | **2–60 s** on ~30–40% of WPS-enabled APs | Offline PIN recovery from one M1–M3 exchange; defeats lockouts; bypasses the WPA2 password entirely |
+| 1. Config | default / ISP-derived credentials, exposed admin panel | minutes | The password is guessable *by lookup*, not by compute |
+| 2. Credential | PMKID → targeted candidates | minutes–hours | The CyberArk path; needs a shaped list, not a big one |
+| 3. Identity | **Enterprise: PEAP relay** (`hostapd-mana` + `wpa_sycophant`) | minutes | Authenticates **without ever cracking the password** |
+| 3. Identity | GTC downgrade / evil twin + captive portal | minutes | Harvests cleartext or MSCHAPv2 from humans |
+| 4. Post-auth | client isolation, VLAN/segmentation, guest→LAN pivot | — | Where the actual damage is; the PSK was never the objective |
+
+The lesson: **every tier above "brute force the PSK" is faster and more reliable than
+brute-forcing the PSK.** A professional never spends GPU-days on a PSK if WPS answers in 30
+seconds, and never cracks a credential that can be relayed instead.
+
+### 10.2 Their published breakthroughs were subtractive, not additive
+
+- **Vanhoef (Dragonblood)** — found protocol-level flaws in SAE; did not add compute.
+- **Steube (PMKID)** — removed the need for a client and a handshake; one frame.
+- **Hoorvitch (CyberArk)** — removed the need for clever guessing; 44% were phone numbers.
+
+Each advanced the field by **deleting work**. Nobody advanced it by making the guesser
+smarter. That is the strongest available signal about where to spend effort.
+
+### 10.3 They decide before they build
+
+A world-class practitioner asks, in this order:
+
+1. **What decision does this support?** ("Should I rotate this password?" — not "can I crack it?")
+2. **What is the cheapest test that changes that decision?** Often: read the router config.
+3. **What is already proven?** They compose `hashcat`/`hcxtools`/`reaver` rather than reimplement.
+4. **How will I know it worked?** Metric defined first, evidence timestamped and reproducible.
+5. **What is the residual risk after remediation?** Re-test, then monitor (WIDS/rogue-AP detection).
+
+They also write the **report** as the deliverable: finding → severity/CVSS → business impact
+→ remediation → verification step. "I cracked it" is an anecdote; a finding table is a product.
+
+### 10.4 What that means for this repo
+
+- The **auditor in §8 is the right shape**, but incomplete: it scores a password and ignores
+  WPS, PMKID exposure, transition mode, client isolation, and firmware — the things that
+  actually break networks. A config audit is higher-ROI than any cracking tier.
+- **Keep the LLM tier**, but position it as candidate *generation*, and only ship it if the
+  harness proves it beats masks + rules on your SSID. Otherwise it is decoration.
+- **Add a monitoring angle** (rogue AP / deauth detection) if this is ever used on a network
+  you are responsible for. Detection is what enterprises actually buy.
+- **Do not add capture** until a config audit says the password is the weakest link. It
+  usually is not.
+
+### 10.5 The one-sentence version
+
+Elite practice here is **subtractive**: find the shortest path to the objective (WPS, relay,
+lookup), measure before building, and ship a remediation — the cracker is the least
+interesting component, which is exactly why "AI wifi crack" is the wrong product name.
+
+---
+
 ## Sources
 
 - CyberArk, *Cracking WiFi at Scale with One Simple Trick* (5,000 networks, 70% cracked, 44% phone numbers) — cyberark.com
