@@ -31,12 +31,48 @@ PR into `main` is opened. `mac` is registered for documentation/intent only — 
 
 ## On the Mac — one-time setup
 
+The folder `/Users/ekky/Desktop/Wifi Crack` is **not** a git repository — it is a plain
+folder. Every `git` command inside it fails with `fatal: not a git repository` until it is
+cloned or attached. Use the helper script:
+
+```bash
+# from anywhere, e.g. after downloading the script or cloning elsewhere
+bash ~/path/to/scripts/mac-setup.sh
+```
+
+It is safe to re-run and handles all three states:
+
+| State of the folder | What the script does |
+|---|---|
+| Already a repo | re-points `origin` to GitHub, fetches, reports branch |
+| Empty | `git clone <github> .` — ends on `main` |
+| Has files, no `.git` | **refuses**, shows contents, offers two options |
+| Has files, `--adopt` | tars to `~/Desktop/Wifi-Crack-backup-<ts>.tar.gz`, then `git init` + reset to `origin/main` |
+
+Or do it by hand in an empty folder:
+
 ```bash
 cd "/Users/ekky/Desktop/Wifi Crack"     # quotes required, path has a space
+git clone https://github.com/tarnatphon/localAi-wifi-crack.git .
 git remote -v                           # expect origin -> github.com/tarnatphon/localAi-wifi-crack
-git remote set-url origin https://github.com/tarnatphon/localAi-wifi-crack.git  # only if wrong
-git fetch origin && git checkout main && git pull --ff-only
+git checkout main
 ```
+
+Order matters: `git clone` must happen **before** any `git fetch`/`git checkout` — those
+cannot work in a folder that has no `.git` directory.
+
+## Troubleshooting
+
+**`fatal: not a git repository (or any of the parent directories): .git`**
+You are in a plain folder. Run `scripts/mac-setup.sh` (above). Remote commands are
+irrelevant until a `.git` exists.
+
+**`&amp;&amp;` in a pasted command**
+Chat rendering HTML-escapes `&` as `&amp;`. Type a literal `&&`, or run the commands on
+separate lines — `&` alone backgrounds the command and `amp;` is not a command.
+
+**`fatal: destination path '.' already exists and is not an empty directory`**
+The folder has files. Move them out, or use `--adopt` to back up and overwrite.
 
 ## Daily loop
 
