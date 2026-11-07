@@ -395,6 +395,57 @@ router answers "what is actually broken?". Neither needs a monitor-mode adapter.
 
 ---
 
+## 12. Platform matrix: can it *run* the audit, and can it *be* attacked?
+
+These are two different questions and the answers are nearly inverse. "Crack a Mac / PC /
+iPhone / Android / iPad" can mean either, so both are below.
+
+### 12.1 Can the platform run the audit?
+
+| Platform | Offline cracking (hashcat) | 802.11 capture (monitor/inject) | Verdict |
+|---|---|---|---|
+| **Windows PC** | **Yes — best case.** Full CUDA/ROCm speed: RTX 4090 ≈ 2,600 kH/s | No. Needs Kali (boot/VM) or a Pi | **The GPU machine** |
+| **macOS** (any Mac) | Yes, Metal/OpenCL, but slow — **M2 Max ≈ 275 kH/s, M2 Pro ≈ 126 kH/s, M5 ≈ 135 kH/s, M1 Ultra ≈ 285 kH/s** | **No.** No monitor mode, no injection, any adapter | Fine for wordlists, ~10× too slow for masks |
+| **Android** (phone/tablet) | Technically, via NetHunter chroot; impractical | Only with **full NetHunter: unlocked bootloader + root + custom kernel + USB OTG adapter**. Internal chips: QCACLD-2.0 yes, QCACLD-3.0 monitor-only, MediaTek **no**. Nexmon only on ancient Broadcom (Nexus 5 class) | Portable capture rig, not a cracker |
+| **iPhone / iPad** | **No.** No hashcat, no raw sockets, no custom kernel, no realistic modern jailbreak | **No.** Not even with an adapter | **Target only** |
+
+Concrete consequence: a Mac is **~10–20× slower than one RTX 4090** on WPA hashes. That is
+not fatal — `rockyou` is 52 s at 275 kH/s — but a 10-digit mobile mask goes from 6 minutes to
+~1 hour, and anything beyond 10⁹ guesses moves from "hours" to "next month". If the PC has a
+discrete NVIDIA card, run the heavy tiers there and the report on the Mac.
+
+### 12.2 Can the platform be attacked?
+
+Split by *what* is being attacked, because the economics differ by orders of magnitude:
+
+| Target | Attack | Reality |
+|---|---|---|
+| Hotspot on iPhone / iPad / Android tab | The **Wi-Fi layer** | **Yes, and device-agnostic.** A hotspot is just WPA2-PSK; §11 applies identically. iPhone vs iPad vs Tab changes nothing cryptographically |
+| Saved Wi-Fi passwords on macOS | Keychain | Requires the **login password**. No login password → no Keychain |
+| Saved Wi-Fi passwords on Windows | `netsh wlan` profile store | Requires being logged in as that user, or admin + offline SAM work |
+| Saved Wi-Fi passwords on iOS/iPadOS | — | Requires an **unlocked** device. No unlock → no list |
+| Saved Wi-Fi passwords on Android | — | Root (legacy) or a system-privileged app |
+| **Device unlock / full data extraction** | Secure Enclave (iOS/iPadOS), FileVault (macOS), TPM/BitLocker (Windows), FBE + Titan M (Android) | **Different discipline entirely** — hardware forensics, not Wi-Fi. iPhone/iPad with a modern SoC is effectively closed to DIY; Android varies wildly by vendor and bootloader state |
+
+Two honest conclusions:
+
+1. **"Cracking the device" is not an extension of this project.** It is a different field with
+   different economics, and for iPhone/iPad the answer is "no, not by you". I'll document the
+   defensive side rather than provide bypass steps.
+2. **The realistic threat to all of these is physical access plus a weak unlock secret**, not
+   Wi-Fi. So the useful output of this whole project for a device owner is a checklist:
+   long alphanumeric passcode, FileVault/device encryption on, USB-accessory lock on iOS,
+   and never store the Wi-Fi password as the unlock code.
+
+### 12.3 Why the hardware-free design wins again
+
+Because §7's synthesized-hash approach needs **no monitor mode anywhere**, the audit itself
+runs on macOS, Windows, and (in principle) Android — only the optional *capture* step needs
+Linux plus an adapter. Choosing hardware-free made the tool portable across every platform in
+the question except iPhone/iPad, which cannot run third-party radios at all.
+
+---
+
 ## Sources
 
 - CyberArk, *Cracking WiFi at Scale with One Simple Trick* (5,000 networks, 70% cracked, 44% phone numbers) — cyberark.com
