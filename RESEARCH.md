@@ -330,6 +330,71 @@ interesting component, which is exactly why "AI wifi crack" is the wrong product
 
 ---
 
+## 11. The hotspot — and why it changes the experimental design
+
+A phone hotspot is the best test target available here, but **not** for the reason it first
+appears. It is not a stand-in for a router; it is a **controlled lab**, because you own both
+variables: the SSID *and* the password.
+
+### 11.1 What a hotspot does and does not have
+
+| Property | iPhone Personal Hotspot | Android hotspot |
+|---|---|---|
+| Security | WPA2-PSK | WPA2/WPA3 (varies by OEM); some OEMs ship **Open** |
+| Password rules | 8–63 ASCII, min 8 enforced | 8+, OEM defaults often 8 random alnum |
+| Default password | **three words + 2–4 digits** (iOS 16+), rarely changed | 8 random alphanumeric, often weak |
+| WPS | **No** | **No** |
+| PMKID | Not guaranteed — clientless capture depends on the AP supporting PMKID in its assoc response | Same |
+| SSID | Your device name, i.e. **your real name** | Usually device/model name |
+
+Two consequences for the plan:
+
+1. **Half the attack tiers evaporate.** No WPS (so no 2–60 s Pixie Dust win), and PMKID is
+   unreliable on phones. §10's cheapest tier does not apply to a hotspot.
+2. **The SSID leaks PII.** "Ekkaphon's iPhone" hands the attacker a first name, a language,
+   and probably a transliteration habit. This is precisely the case where LLM candidate
+   generation beats both `rockyou` and masks — and it is therefore the **only** scenario in
+   this project where the AI tier can prove itself.
+
+### 11.2 The controlled experiment nobody publishes
+
+Because you can *set* the hotspot password, you can run a dose–response sweep instead of one
+anecdote. Same SSID, same harness, same hash path — only the password class changes:
+
+| # | Password class | Example | Expected winner | Rough cost @ 2.6 MH/s |
+|---|---|---|---|---|
+| 1 | 10-digit mobile | `0812345678` | Thai mask | ~6 min |
+| 2 | Name + year | `Ekkaphon2024` | **LLM / PII tier** | seconds, if it's generated at all |
+| 3 | Leet + name + year | `3kk4phon@2024` | rules + LLM | minutes (rules), seconds (LLM) |
+| 4 | iOS default 3 words + digits | `peachbroommap42` | **nothing** | ≈10¹⁴ — out of reach |
+| 5 | 16 random | `vT7#qLm2...` | **nothing** | ~10²² — never |
+
+Rows 2–3 are the whole argument for the AI tier; rows 4–5 are the argument that it is not
+magic; rows 1 and 4 together show that **the default is stronger than what people type**.
+That table, measured on your own hardware, is a more honest and more publishable result than
+another "I cracked my own Wi-Fi" post.
+
+### 11.3 The catch: you still cannot capture it on a Mac
+
+Setting the password does not create a monitor-mode interface. On macOS you still cannot see
+the handshake, so the hotspot gets tested through **synthesized hashes** (§7) — which is
+exactly right, because you know the ground truth and can validate every "crack" instantly
+with zero false-positive risk. Real capture of a hotspot is a Pi Zero 2 W job, and even then
+PMKID may simply not answer.
+
+### 11.4 Revised roles
+
+| Target | Role | Why |
+|---|---|---|
+| **Hotspot** | controlled crackability lab | You own SSID + password → repeatable, ground-truthed, AI-verdict-grade |
+| **Home router** | config audit | WPS, PMKID exposure, WPA3/transition, client isolation — the high-ROI findings |
+| Pi Zero 2 W (§7) | real-world validation | Only if you need to prove it works against a live handshake |
+
+So the two lab targets are **not** redundant: the hotspot answers "is the AI tier real?", the
+router answers "what is actually broken?". Neither needs a monitor-mode adapter.
+
+---
+
 ## Sources
 
 - CyberArk, *Cracking WiFi at Scale with One Simple Trick* (5,000 networks, 70% cracked, 44% phone numbers) — cyberark.com
